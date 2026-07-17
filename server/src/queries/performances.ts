@@ -1,5 +1,11 @@
 import { pool } from '../db/pool.js'
-import type { PerformanceListRow, PerformanceDetailRow, RankingRow } from '../types/performance.js'
+import type {
+  PerformanceDetailRow,
+  PerformanceInput,
+  PerformanceListRow,
+  PerformanceUpdateInput,
+  RankingRow,
+} from '../types/performance.js'
 
 const BASE_SELECT = `
   SELECT
@@ -75,6 +81,32 @@ const RANKINGS_COUNT_SQL = `
   FROM performances perf
 `
 
+const INSERT_SQL = `
+  INSERT INTO performances (
+    player_id, match_id, opponent_team, match_result,
+    minutes_played, goals, assists, shots, shots_on_target,
+    yellow_cards, red_cards, player_rating
+  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+  RETURNING id
+`
+
+const DELETE_SQL = `
+  DELETE FROM performances WHERE id = $1 RETURNING id
+`
+
+const UPDATABLE_COLUMNS = [
+  'opponent_team',
+  'match_result',
+  'minutes_played',
+  'goals',
+  'assists',
+  'shots',
+  'shots_on_target',
+  'yellow_cards',
+  'red_cards',
+  'player_rating',
+] as const
+
 export interface FindOptions {
   limit: number
   offset: number
@@ -122,4 +154,48 @@ export async function findRankings(limit: number, offset: number): Promise<{ row
     rows: dataResult.rows,
     total: Number(countResult.rows[0].total),
   }
+}
+
+export async function createPerformance(input: PerformanceInput): Promise<number> {
+  const result = await pool.query<{ id: number }>(INSERT_SQL, [
+    input.player_id,
+    input.match_id,
+    input.opponent_team ?? null,
+    input.match_result ?? null,
+    input.minutes_played ?? null,
+    input.goals ?? null,
+    input.assists ?? null,
+    input.shots ?? null,
+    input.shots_on_target ?? null,
+    input.yellow_cards ?? null,
+    input.red_cards ?? null,
+    input.player_rating ?? null,
+  ])
+  return result.rows[0].id
+}
+
+export async function updatePerformance(id: number, input: PerformanceUpdateInput): Promise<boolean> {
+  const sets: string[] = []
+  const params: unknown[] = []
+
+  for (const col of UPDATABLE_COLUMNS) {
+    if (col in input) {
+      params.push(input[col as keyof PerformanceUpdateInput])
+      sets.push(`${col} = $${params.length}`)
+    }
+  }
+
+  if (sets.length === 0) return false
+
+  params.push(id)
+  const result = await pool.query(
+    `UPDATE performances SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING id`,
+    params,
+  )
+  return result.rowCount !== null && result.rowCount > 0
+}
+
+export async function deletePerformance(id: number): Promise<boolean> {
+  const result = await pool.query(DELETE_SQL, [id])
+  return result.rowCount !== null && result.rowCount > 0
 }
