@@ -1,7 +1,9 @@
-import express from 'express'
 import dotenv from 'dotenv'
+import express from 'express'
+
 import { testConnection } from './db/pool.js'
 import performancesRouter from './routes/performances.js'
+import rankingsRouter from './routes/rankings.js'
 
 dotenv.config()
 
@@ -13,6 +15,7 @@ app.get('/health', (_req, res) => {
 })
 
 app.use('/api/performances', performancesRouter)
+app.use('/api/rankings', rankingsRouter)
 
 const PORT = Number(process.env.PORT) || 3000
 
