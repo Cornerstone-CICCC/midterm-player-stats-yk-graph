@@ -104,3 +104,20 @@ export interface RankingRow {
   total_assists: string
   avg_rating: number | null
 }
+
+export interface PerformanceInput {
+  player_id: string
+  match_id: string
+  opponent_team?: string | null
+  match_result?: string | null
+  minutes_played?: number | null
+  goals?: number | null
+  assists?: number | null
+  shots?: number | null
+  shots_on_target?: number | null
+  yellow_cards?: number | null
+  red_cards?: number | null
+  player_rating?: number | null
+}
+
+export type PerformanceUpdateInput = Partial<Omit<PerformanceInput, 'player_id' | 'match_id'>>
