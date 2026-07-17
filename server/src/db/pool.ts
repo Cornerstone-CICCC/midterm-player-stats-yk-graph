@@ -3,7 +3,11 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
+// NUMERIC (1700): pg returns a string for precision; we only need float values.
 pg.types.setTypeParser(1700, (val) => parseFloat(val))
+
+// DATE (1082): keep as 'YYYY-MM-DD' string; a JS Date would shift the day via timezone.
+pg.types.setTypeParser(1082, (val) => val)
 
 export const pool = new Pool({
   host: process.env.PGHOST,
