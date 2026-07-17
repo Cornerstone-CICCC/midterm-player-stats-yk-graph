@@ -34,6 +34,7 @@ const SEARCH_WHERE = `
   WHERE p.player_name ILIKE $1
      OR p.nationality ILIKE $1
      OR p.position    ILIKE $1
+     OR p.team        ILIKE $1
 `
 
 const SORTABLE_COLUMNS = {
