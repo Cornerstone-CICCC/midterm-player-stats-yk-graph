@@ -1,0 +1,164 @@
+---
+import "../../styles/global.css";
+import { fetchPerformanceById } from "../../lib/api";
+import {
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+  TableHeader,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+
+const { id } = Astro.params;
+const numId = Number(id);
+
+if (!Number.isInteger(numId) || numId < 1) {
+  return Astro.redirect("/404");
+}
+
+const detail = await fetchPerformanceById(numId);
+if (!detail) {
+  return new Response("Not found", { status: 404 });
+}
+
+// 表示するスタッツをカテゴリに分ける（キーはDBカラム名、ラベルは表示名）
+const groups: { title: string; fields: [string, string][] }[] = [
+  {
+    title: "Match Info",
+    fields: [
+      ["match_date", "Date"],
+      ["stadium", "Stadium"],
+      ["city", "City"],
+      ["tournament_stage", "Stage"],
+      ["opponent_team", "Opponent"],
+      ["match_result", "Result"],
+      ["minutes_played", "Minutes"],
+    ],
+  },
+  {
+    title: "Attacking",
+    fields: [
+      ["goals", "Goals"],
+      ["assists", "Assists"],
+      ["shots", "Shots"],
+      ["shots_on_target", "Shots on Target"],
+      ["expected_goals_xg", "xG"],
+      ["expected_assists_xa", "xA"],
+      ["key_passes", "Key Passes"],
+      ["dribbles_attempted", "Dribbles"],
+      ["successful_dribbles", "Successful Dribbles"],
+    ],
+  },
+  {
+    title: "Passing",
+    fields: [
+      ["total_passes", "Total Passes"],
+      ["successful_passes", "Successful Passes"],
+      ["pass_accuracy", "Pass Accuracy"],
+      ["crosses", "Crosses"],
+      ["successful_crosses", "Successful Crosses"],
+    ],
+  },
+  {
+    title: "Defending",
+    fields: [
+      ["tackles", "Tackles"],
+      ["interceptions", "Interceptions"],
+      ["clearances", "Clearances"],
+      ["blocks", "Blocks"],
+      ["aerial_duels_won", "Aerial Won"],
+      ["aerial_duels_lost", "Aerial Lost"],
+      ["recoveries", "Recoveries"],
+    ],
+  },
+  {
+    title: "Discipline",
+    fields: [
+      ["fouls_committed", "Fouls Committed"],
+      ["fouls_suffered", "Fouls Suffered"],
+      ["yellow_cards", "Yellow Cards"],
+      ["red_cards", "Red Cards"],
+      ["offsides", "Offsides"],
+    ],
+  },
+  {
+    title: "Physical",
+    fields: [
+      ["distance_covered_km", "Distance (km)"],
+      ["sprint_distance_km", "Sprint (km)"],
+      ["top_speed_kmh", "Top Speed (km/h)"],
+      ["stamina_score", "Stamina"],
+    ],
+  },
+  {
+    title: "Ratings",
+    fields: [
+      ["player_rating", "Player Rating"],
+      ["performance_score", "Performance"],
+      ["creativity_score", "Creativity"],
+      ["consistency_score", "Consistency"],
+      ["clutch_performance_score", "Clutch"],
+    ],
+  },
+];
+
+// 値を表示用に整形（小数は2桁、null は "—"）
+function fmt(v: string | number | null): string {
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "number")
+    return Number.isInteger(v) ? String(v) : v.toFixed(2);
+  return v;
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{detail.player_name} — Performance</title>
+  </head>
+  <body class="bg-background text-foreground min-h-screen p-8">
+    <div class="mx-auto max-w-4xl space-y-6">
+      <div class="flex items-center justify-between">
+        <Button as="a" variant="outline" href="/">← Back</Button>
+        <div class="flex gap-2">
+          <Button as="a" href={`/performances/${detail.id}/edit`}>Edit</Button>
+        </div>
+      </div>
+
+      <div>
+        <h1 class="text-3xl font-bold">{detail.player_name}</h1>
+        <p class="text-muted-foreground">
+          {detail.nationality} · {detail.position} · {detail.club_name}
+          {detail.jersey_number ? ` · #${detail.jersey_number}` : ""}
+        </p>
+      </div>
+
+      <div class="grid gap-6 md:grid-cols-2">
+        {
+          groups.map((group) => (
+            <div class="rounded-lg border p-4">
+              <h2 class="mb-3 font-semibold">{group.title}</h2>
+              <Table>
+                <TableBody>
+                  {group.fields.map(([key, label]) => (
+                    <TableRow>
+                      <TableCell class="text-muted-foreground">
+                        {label}
+                      </TableCell>
+                      <TableCell class="text-right font-medium">
+                        {fmt(detail[key])}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </body>
+</html>
