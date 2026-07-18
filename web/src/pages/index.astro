@@ -1,11 +1,102 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import { fetchPerformances } from "../lib/api";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// SSR: リクエストごとに実行される
+const url = new URL(Astro.request.url);
+const params = new URLSearchParams();
+params.set("page", url.searchParams.get("page") ?? "1");
+params.set("limit", url.searchParams.get("limit") ?? "10");
+if (url.searchParams.get("search"))
+  params.set("search", url.searchParams.get("search")!);
+if (url.searchParams.get("sort"))
+  params.set("sort", url.searchParams.get("sort")!);
+if (url.searchParams.get("order"))
+  params.set("order", url.searchParams.get("order")!);
+
+const { data, pagination } = await fetchPerformances(params);
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Player Performance Explorer</title>
+  </head>
+  <body>
+    <h1>Player Performances</h1>
+
+    <form method="get">
+      <input
+        type="text"
+        name="search"
+        placeholder="Search name, team, position"
+        value={url.searchParams.get("search") ?? ""}
+      />
+      <select name="limit">
+        {
+          [10, 25, 50, 100].map((n) => (
+            <option value={n} selected={pagination.limit === n}>
+              {n} per page
+            </option>
+          ))
+        }
+      </select>
+      <button type="submit">Apply</button>
+    </form>
+
+    <p
+      >{pagination.total} records / page {pagination.page} of {
+        pagination.totalPages
+      }</p
+    >
+
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th>Nationality</th>
+          <th>Position</th>
+          <th>Date</th>
+          <th>Opponent</th>
+          <th>Goals</th>
+          <th>Assists</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          data.map((row) => (
+            <tr>
+              <td>
+                <a href={`/performances/${row.id}`}>{row.player_name}</a>
+              </td>
+              <td>{row.nationality}</td>
+              <td>{row.position}</td>
+              <td>{row.match_date}</td>
+              <td>{row.opponent_team}</td>
+              <td>{row.goals}</td>
+              <td>{row.assists}</td>
+              <td>{row.player_rating?.toFixed(2)}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+
+    <nav>
+      {
+        pagination.page > 1 && (
+          <a href={`?page=${pagination.page - 1}&limit=${pagination.limit}`}>
+            Previous
+          </a>
+        )
+      }
+      {
+        pagination.page < pagination.totalPages && (
+          <a href={`?page=${pagination.page + 1}&limit=${pagination.limit}`}>
+            Next
+          </a>
+        )
+      }
+    </nav>
+  </body>
+</html>
