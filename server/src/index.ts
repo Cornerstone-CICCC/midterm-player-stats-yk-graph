@@ -1,5 +1,6 @@
 import dotenv from 'dotenv'
 import express from 'express'
+import cors from 'cors'
 
 import { testConnection } from './db/pool.js'
 import optionsRouter from './routes/options.js'
@@ -9,6 +10,7 @@ import rankingsRouter from './routes/rankings.js'
 dotenv.config()
 
 const app = express()
+app.use(cors({ origin: 'http://localhost:4321' }))
 app.use(express.json())
 
 app.get('/health', (_req, res) => {
