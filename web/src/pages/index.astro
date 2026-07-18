@@ -1,6 +1,20 @@
 ---
 import "../styles/global.css";
 import { fetchPerformances } from "../lib/api";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const url = new URL(Astro.request.url);
 const params = new URLSearchParams();
@@ -14,89 +28,106 @@ if (url.searchParams.get("order"))
   params.set("order", url.searchParams.get("order")!);
 
 const { data, pagination } = await fetchPerformances(params);
+const currentSearch = url.searchParams.get("search") ?? "";
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Player Performance Explorer</title>
   </head>
-  <body>
-    <h1>Player Performances</h1>
+  <body class="bg-background text-foreground min-h-screen p-8">
+    <div class="mx-auto max-w-6xl space-y-6">
+      <h1 class="text-3xl font-bold">Player Performances</h1>
 
-    <form method="get">
-      <input
-        type="text"
-        name="search"
-        placeholder="Search name, team, position"
-        value={url.searchParams.get("search") ?? ""}
-      />
-      <select name="limit">
-        {
-          [10, 25, 50, 100].map((n) => (
-            <option value={n} selected={pagination.limit === n}>
-              {n} per page
-            </option>
-          ))
+      <form method="get" class="flex flex-wrap items-center gap-3">
+        <Input
+          type="text"
+          name="search"
+          placeholder="Search name, team, position"
+          value={currentSearch}
+          class="w-64"
+        />
+        <NativeSelect name="limit" class="w-40">
+          {
+            [10, 25, 50, 100].map((n) => (
+              <NativeSelectOption
+                value={String(n)}
+                selected={pagination.limit === n}
+              >
+                {n} per page
+              </NativeSelectOption>
+            ))
+          }
+        </NativeSelect>
+        <Button type="submit">Apply</Button>
+      </form>
+
+      <p class="text-muted-foreground text-sm">
+        {pagination.total} records / page {pagination.page} of {
+          pagination.totalPages
         }
-      </select>
-      <button type="submit">Apply</button>
-    </form>
+      </p>
 
-    <p
-      >{pagination.total} records / page {pagination.page} of {
-        pagination.totalPages
-      }</p
-    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Player</TableHead>
+            <TableHead>Nationality</TableHead>
+            <TableHead>Position</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Opponent</TableHead>
+            <TableHead class="text-right">Goals</TableHead>
+            <TableHead class="text-right">Assists</TableHead>
+            <TableHead class="text-right">Rating</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {
+            data.map((row) => (
+              <TableRow>
+                <TableCell>
+                  <a
+                    href={`/performances/${row.id}`}
+                    class="text-primary underline"
+                  >
+                    {row.player_name}
+                  </a>
+                </TableCell>
+                <TableCell>{row.nationality}</TableCell>
+                <TableCell>{row.position}</TableCell>
+                <TableCell>{row.match_date}</TableCell>
+                <TableCell>{row.opponent_team}</TableCell>
+                <TableCell class="text-right">{row.goals}</TableCell>
+                <TableCell class="text-right">{row.assists}</TableCell>
+                <TableCell class="text-right">
+                  {row.player_rating?.toFixed(2)}
+                </TableCell>
+              </TableRow>
+            ))
+          }
+        </TableBody>
+      </Table>
 
-    <table border="1">
-      <thead>
-        <tr>
-          <th>Player</th>
-          <th>Nationality</th>
-          <th>Position</th>
-          <th>Date</th>
-          <th>Opponent</th>
-          <th>Goals</th>
-          <th>Assists</th>
-          <th>Rating</th>
-        </tr>
-      </thead>
-      <tbody>
+      <nav class="flex items-center justify-between">
         {
-          data.map((row) => (
-            <tr>
-              <td>
-                <a href={`/performances/${row.id}`}>{row.player_name}</a>
-              </td>
-              <td>{row.nationality}</td>
-              <td>{row.position}</td>
-              <td>{row.match_date}</td>
-              <td>{row.opponent_team}</td>
-              <td>{row.goals}</td>
-              <td>{row.assists}</td>
-              <td>{row.player_rating?.toFixed(2)}</td>
-            </tr>
-          ))
+          pagination.page > 1 ? (
+            <a href={`?page=${pagination.page - 1}&limit=${pagination.limit}`}>
+              <Button variant="outline">Previous</Button>
+            </a>
+          ) : (
+            <span />
+          )
         }
-      </tbody>
-    </table>
-
-    <nav>
-      {
-        pagination.page > 1 && (
-          <a href={`?page=${pagination.page - 1}&limit=${pagination.limit}`}>
-            Previous
-          </a>
-        )
-      }
-      {
-        pagination.page < pagination.totalPages && (
-          <a href={`?page=${pagination.page + 1}&limit=${pagination.limit}`}>
-            Next
-          </a>
-        )
-      }
-    </nav>
+        {
+          pagination.page < pagination.totalPages && (
+            <a href={`?page=${pagination.page + 1}&limit=${pagination.limit}`}>
+              <Button variant="outline">Next</Button>
+            </a>
+          )
+        }
+      </nav>
+    </div>
   </body>
 </html>
