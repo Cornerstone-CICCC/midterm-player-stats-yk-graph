@@ -1,0 +1,158 @@
+---
+import "../../../styles/global.css";
+import { fetchPerformanceById } from "../../../lib/api";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+const { id } = Astro.params;
+const numId = Number(id);
+if (!Number.isInteger(numId) || numId < 1) {
+  return new Response("Invalid id", { status: 400 });
+}
+
+const detail = await fetchPerformanceById(numId);
+if (!detail) {
+  return new Response("Not found", { status: 404 });
+}
+
+const apiBase = import.meta.env.PUBLIC_API_BASE_URL ?? "http://localhost:3000";
+
+const fields: {
+  key: string;
+  label: string;
+  type: "text" | "number";
+  step?: string;
+}[] = [
+  { key: "opponent_team", label: "Opponent", type: "text" },
+  { key: "match_result", label: "Result (W/D/L)", type: "text" },
+  { key: "minutes_played", label: "Minutes", type: "number" },
+  { key: "goals", label: "Goals", type: "number" },
+  { key: "assists", label: "Assists", type: "number" },
+  { key: "shots", label: "Shots", type: "number" },
+  { key: "shots_on_target", label: "Shots on Target", type: "number" },
+  { key: "yellow_cards", label: "Yellow Cards", type: "number" },
+  { key: "red_cards", label: "Red Cards", type: "number" },
+  { key: "player_rating", label: "Player Rating", type: "number", step: "0.1" },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Edit — {detail.player_name}</title>
+  </head>
+  <body class="bg-background text-foreground min-h-screen p-8">
+    <div class="mx-auto max-w-2xl space-y-6">
+      <Button as="a" variant="outline" href={`/performances/${detail.id}`}
+        >← Cancel</Button
+      >
+
+      <div>
+        <h1 class="text-2xl font-bold">Edit Performance</h1>
+        <p class="text-muted-foreground">
+          {detail.player_name} vs {detail.opponent_team} ({detail.match_date})
+        </p>
+      </div>
+
+      <form
+        id="edit-form"
+        class="space-y-4"
+        data-id={detail.id}
+        data-api={apiBase}
+      >
+        {
+          fields.map((f) => (
+            <div class="grid grid-cols-3 items-center gap-4">
+              <label for={f.key} class="text-sm font-medium">
+                {f.label}
+              </label>
+              <div class="col-span-2">
+                <Input
+                  type={f.type}
+                  id={f.key}
+                  name={f.key}
+                  step={f.step}
+                  value={detail[f.key] ?? ""}
+                />
+              </div>
+            </div>
+          ))
+        }
+
+        <div class="flex items-center justify-between pt-4">
+          <Button type="submit">Save Changes</Button>
+          <Button type="button" id="delete-btn" variant="outline">Delete</Button
+          >
+        </div>
+
+        <p id="message" class="text-sm"></p>
+      </form>
+    </div>
+
+    <script>
+      const form = document.getElementById("edit-form") as HTMLFormElement;
+      const id = form.dataset.id;
+      const apiBase = form.dataset.api;
+      const message = document.getElementById("message")!;
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        message.textContent = "Saving...";
+
+        const formData = new FormData(form);
+        const body: Record<string, unknown> = {};
+        for (const [key, value] of formData.entries()) {
+          const v = value.toString().trim();
+          const input = form.elements.namedItem(key) as HTMLInputElement;
+          if (v === "") continue;
+          body[key] = input.type === "number" ? Number(v) : v;
+        }
+
+        try {
+          const res = await fetch(`${apiBase}/api/performances/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (res.ok) {
+            window.location.href = `/performances/${id}`;
+          } else {
+            const err = await res.json();
+            message.textContent = `Error: ${err.error ?? res.status}`;
+            message.className = "text-sm text-destructive";
+          }
+        } catch (err) {
+          message.textContent = "Network error";
+          message.className = "text-sm text-destructive";
+        }
+      });
+
+      document
+        .getElementById("delete-btn")!
+        .addEventListener("click", async () => {
+          if (
+            !confirm("Delete this performance record? This cannot be undone.")
+          )
+            return;
+          message.textContent = "Deleting...";
+
+          try {
+            const res = await fetch(`${apiBase}/api/performances/${id}`, {
+              method: "DELETE",
+            });
+            if (res.status === 204) {
+              window.location.href = "/";
+            } else {
+              const err = await res.json();
+              message.textContent = `Error: ${err.error ?? res.status}`;
+              message.className = "text-sm text-destructive";
+            }
+          } catch (err) {
+            message.textContent = "Network error";
+            message.className = "text-sm text-destructive";
+          }
+        });
+    </script>
+  </body>
+</html>

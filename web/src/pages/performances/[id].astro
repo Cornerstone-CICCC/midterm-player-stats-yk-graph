@@ -23,7 +23,6 @@ if (!detail) {
   return new Response("Not found", { status: 404 });
 }
 
-// 表示するスタッツをカテゴリに分ける（キーはDBカラム名、ラベルは表示名）
 const groups: { title: string; fields: [string, string][] }[] = [
   {
     title: "Match Info",
@@ -104,7 +103,6 @@ const groups: { title: string; fields: [string, string][] }[] = [
   },
 ];
 
-// 値を表示用に整形（小数は2桁、null は "—"）
 function fmt(v: string | number | null): string {
   if (v === null || v === undefined || v === "") return "—";
   if (typeof v === "number")

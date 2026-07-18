@@ -59,7 +59,6 @@ router.post('/', async (req, res, next) => {
     const id = await createPerformance(req.body)
     res.status(201).json({ data: { id } })
   } catch (err: any) {
-    // FK 違反 / UNIQUE 違反を 400 に変換
     if (err?.code === '23503') {
       return res.status(400).json({ error: 'player_id or match_id does not exist' })
     }
